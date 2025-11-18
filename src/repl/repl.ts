@@ -6,11 +6,17 @@ import { REPLState } from './state.js';
 export async function startREPL() {
   const state = new REPLState();
 
+  // Ensure stdin is in raw mode and not paused
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(false);
+  }
+  process.stdin.resume();
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: chalk.blue('reactgen> '),
-    terminal: true
+    terminal: process.stdout.isTTY
   });
 
   console.log('Initializing...');

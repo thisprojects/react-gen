@@ -1,5 +1,9 @@
 import * as babel from '@babel/parser';
-import traverse from '@babel/traverse';
+import traverseModule, { NodePath } from '@babel/traverse';
+import * as t from '@babel/types';
+
+// ESM/CommonJS interop - @babel/traverse exports default differently
+const traverse = (traverseModule as any).default || traverseModule;
 
 export interface ParsedFile {
   exports: string[];
@@ -22,12 +26,12 @@ export function parseFile(content: string, filePath: string): ParsedFile {
 
     // Traverse AST to find imports and exports
     traverse(ast, {
-      ImportDeclaration(path) {
+      ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
         const source = path.node.source.value;
         result.imports.push(source);
       },
 
-      ExportDefaultDeclaration(path) {
+      ExportDefaultDeclaration(path: NodePath<t.ExportDefaultDeclaration>) {
         // Try to get the component name
         if (path.node.declaration.type === 'Identifier') {
           result.exports.push(path.node.declaration.name);
@@ -38,8 +42,8 @@ export function parseFile(content: string, filePath: string): ParsedFile {
         }
       },
 
-      ExportNamedDeclaration(path) {
-        path.node.specifiers?.forEach(spec => {
+      ExportNamedDeclaration(path: NodePath<t.ExportNamedDeclaration>) {
+        path.node.specifiers?.forEach((spec: any) => {
           if (spec.type === 'ExportSpecifier') {
             const exportedName = spec.exported.type === 'Identifier'
               ? spec.exported.name
@@ -53,7 +57,7 @@ export function parseFile(content: string, filePath: string): ParsedFile {
           if (path.node.declaration.type === 'FunctionDeclaration' && path.node.declaration.id) {
             result.exports.push(path.node.declaration.id.name);
           } else if (path.node.declaration.type === 'VariableDeclaration') {
-            path.node.declaration.declarations.forEach(decl => {
+            path.node.declaration.declarations.forEach((decl: any) => {
               if (decl.id.type === 'Identifier') {
                 result.exports.push(decl.id.name);
               }

@@ -5,7 +5,12 @@ import { REPLState } from '../repl/state.js';
 import { buildProjectMap } from '../core/mapper.js';
 
 export async function initCommand(state: REPLState) {
-  const spinner = ora('Scanning project structure...').start();
+  const spinner = ora({
+    text: 'Scanning project structure...',
+    // Disable spinner in non-TTY environments and prevent stdin issues
+    isEnabled: process.stdout.isTTY,
+    discardStdin: false
+  }).start();
 
   try {
     // Find project root (look for package.json)
