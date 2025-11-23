@@ -27,6 +27,24 @@ npm start
 node dist/cli.js
 ```
 
+### Testing
+
+**Note on Node.js versions**: Jest tests currently have compatibility issues with Node.js v25+ due to localStorage initialization errors. For best results, use Node.js v20 or v22 LTS for running Jest tests, or use the standalone test script.
+
+```bash
+# Run all Jest tests (requires Node.js v20 or v22)
+npm test
+
+# Run watch mode
+npm run test:watch
+
+# Run with coverage
+npm run test:coverage
+
+# Run standalone traverse test (works on any Node version including v25)
+npm run test:traverse
+```
+
 ### Testing the REPL
 To test ReactGen, you need to run it inside a React project:
 
@@ -175,6 +193,27 @@ Files are classified as:
 2. **Parse Errors**: Some files with syntax errors or advanced features may fail to parse
 3. **Usage Tracking**: The `usedBy` field is not yet populated (Phase 2)
 4. **Memory**: Large projects (1000+ files) may slow down scanning
+5. **Jest on Node.js v25+**: Jest tests fail with localStorage errors on Node v25+. Use Node v20/v22 LTS for Jest, or run `npm run test:traverse` which works on all Node versions.
+
+## Fixed Issues
+
+### @babel/traverse "is not a function" Error
+**Issue**: On some Linux systems, running `/init` would fail with "traverse is not a function" error.
+
+**Root Cause**: In ES module environments, `@babel/traverse` exports its default function in a nested structure (`traverseNamespace.default.default`). The module export pattern differs between macOS and Linux due to how Node.js resolves ES modules.
+
+**Fix**: The parser now checks for the function at multiple locations:
+```typescript
+const traverse =
+  (traverseNamespace as any).default?.default ||  // Nested default (Linux)
+  (traverseNamespace as any).default ||           // Single default (macOS)
+  traverseNamespace;                               // Fallback
+```
+
+**Test Coverage**: Added specific tests in `src/__tests__/parser.test.ts` under the "traverse functionality" section and a standalone test script `test-traverse.ts` that verifies:
+- AST traversal works without errors
+- Complex JSX parsing works correctly
+- Multiple imports and exports are properly extracted
 
 ## Future Development Notes
 

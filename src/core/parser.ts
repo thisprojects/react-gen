@@ -1,9 +1,15 @@
 import * as babel from '@babel/parser';
-import traverseModule, { NodePath } from '@babel/traverse';
+import * as traverseNamespace from '@babel/traverse';
 import * as t from '@babel/types';
+import { NodePath } from '@babel/traverse';
 
-// ESM/CommonJS interop - @babel/traverse exports default differently
-const traverse = (traverseModule as any).default || traverseModule;
+// ESM/CommonJS interop - @babel/traverse exports default differently in different environments
+// In some environments the function is at .default.default (nested default exports)
+// @ts-ignore - Babel traverse has complex module export patterns
+const traverse =
+  (traverseNamespace as any).default?.default ||
+  (traverseNamespace as any).default ||
+  traverseNamespace;
 
 export interface ParsedFile {
   exports: string[];

@@ -227,6 +227,75 @@ describe('parseFile', () => {
     });
   });
 
+  describe('traverse functionality', () => {
+    it('should successfully traverse AST without "traverse is not a function" error', () => {
+      // This test specifically validates the @babel/traverse import fix
+      // that resolves the "traverse is not a function" error on Linux systems
+      const content = `
+        import React from 'react';
+        import { useState } from 'react';
+        import Button from './Button';
+        import type { Props } from './types';
+
+        export const MyComponent = () => {
+          const [count, setCount] = useState(0);
+          return <div><Button /></div>;
+        };
+
+        export function AnotherComponent() {
+          return <span>Hello</span>;
+        }
+
+        export default MyComponent;
+      `;
+
+      // If traverse import is broken, this will throw "traverse is not a function"
+      const result = parseFile(content, 'src/components/MyComponent.tsx');
+
+      // Verify that traverse actually ran and extracted data
+      expect(result.imports).toHaveLength(4);
+      expect(result.imports).toContain('react');
+      expect(result.imports).toContain('./Button');
+      expect(result.imports).toContain('./types');
+
+      expect(result.exports).toHaveLength(3);
+      expect(result.exports).toContain('MyComponent');
+      expect(result.exports).toContain('AnotherComponent');
+
+      expect(result.type).toBe('component');
+    });
+
+    it('should handle complex nested JSX with traverse', () => {
+      const content = `
+        import React from 'react';
+
+        export const ComplexComponent = () => {
+          return (
+            <div>
+              <header>
+                <nav>
+                  <ul>
+                    <li><a href="/">Home</a></li>
+                  </ul>
+                </nav>
+              </header>
+              <main>
+                <section>Content</section>
+              </main>
+            </div>
+          );
+        };
+      `;
+
+      // Complex JSX requires proper AST traversal
+      const result = parseFile(content, 'Complex.tsx');
+
+      expect(result.exports).toContain('ComplexComponent');
+      expect(result.imports).toContain('react');
+      expect(result.type).toBe('component');
+    });
+  });
+
   describe('export edge cases', () => {
     it('should handle string literal exports', () => {
       const content = `
