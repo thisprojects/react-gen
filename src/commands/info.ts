@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import { REPLState } from '../repl/state.js';
 import { ProjectMap } from '../core/mapper.js';
+import { AutoCompleter } from '../core/autocomplete.js';
+import { icons } from '../utils/icons.js';
 
 export async function infoCommand(state: REPLState, filename: string) {
   const projectMap = state.projectMap;
@@ -10,8 +12,25 @@ export async function infoCommand(state: REPLState, filename: string) {
     return;
   }
 
+  let searchFilename = filename;
+
+  // Check if it's a reference (#file, .folder#file)
+  if (filename.startsWith('#') || filename.includes('.') && filename.includes('#')) {
+    const autocompleter = new AutoCompleter(state);
+    const resolved = autocompleter.resolveReference(filename);
+
+    if (resolved) {
+      // Extract just the filename from the resolved path
+      searchFilename = resolved.split('/').pop()?.replace(/\.(tsx?|jsx?)$/, '') || filename;
+    } else {
+      console.log(chalk.red(`${icons.cross} Could not resolve reference: ${filename}`));
+      console.log(chalk.gray('Tip: Use TAB completion to see available references'));
+      return;
+    }
+  }
+
   // Find file in project map
-  const file = findFileInMap(projectMap, filename);
+  const file = findFileInMap(projectMap, searchFilename);
 
   if (!file) {
     console.log(`File not found: ${filename}`);

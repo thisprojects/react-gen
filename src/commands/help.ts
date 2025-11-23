@@ -18,11 +18,17 @@ ${chalk.blue('/list [filter]')}  Show available files and components
 ${chalk.blue('/info <file>')}    Show detailed information about a file
                   Example: /info Button.tsx
 
+${chalk.blue('/test <ref>')}     Test reference resolution (Phase 2)
+                  Examples:
+                    /test #Button           (file reference)
+                    /test .components#Form  (folder + file)
+                    /test @form:login       (template)
+
 ${chalk.blue('/help')}           Show this help message
 ${chalk.blue('/clear')}          Clear the screen
 ${chalk.blue('/exit')}           Exit ReactGen
 
-${chalk.gray('Tip: Start with /init to scan your project!')}
+${chalk.gray('Tip: Use TAB completion for #files, .folders, and @templates!')}
 `;
 
   console.log(boxen(helpText, {

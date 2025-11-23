@@ -4,6 +4,7 @@ import { listCommand } from '../commands/list.js';
 import { infoCommand } from '../commands/info.js';
 import { helpCommand } from '../commands/help.js';
 import { clearCommand } from '../commands/clear.js';
+import { testCommand } from '../commands/test.js';
 
 export async function handleCommand(
   input: string,
@@ -43,6 +44,14 @@ export async function handleCommand(
         break;
       }
       await infoCommand(state, args[0]);
+      break;
+
+    case 'test':
+      if (state.requiresInit()) {
+        console.log('⚠️  Project not initialized. Run /init first.');
+        break;
+      }
+      testCommand(state, args[0]);
       break;
 
     case 'help':

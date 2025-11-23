@@ -23,8 +23,7 @@ export default {
     ],
   },
   testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/?(*.)+(spec|test).ts'
+    '**/__tests__/**/*.test.ts'
   ],
   collectCoverageFrom: [
     'src/**/*.ts',
