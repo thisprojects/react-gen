@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { REPLState } from '../repl/state.js';
 import { buildProjectMap } from '../core/mapper.js';
+import { icons } from '../utils/icons.js';
 
 export async function initCommand(state: REPLState) {
   const spinner = ora({
@@ -53,9 +54,9 @@ export async function initCommand(state: REPLState) {
 
     // Display summary
     console.log();
-    console.log(`✓ Found ${projectMap.files.length} React files`);
-    console.log(`✓ Found ${projectMap.components.length} components`);
-    console.log(`✓ Project map saved to .reactgen/project-map.json`);
+    console.log(`${icons.checkmark} Found ${projectMap.files.length} React files`);
+    console.log(`${icons.checkmark} Found ${projectMap.components.length} components`);
+    console.log(`${icons.checkmark} Project map saved to .reactgen/project-map.json`);
 
   } catch (error: any) {
     spinner.fail('Failed to scan project');

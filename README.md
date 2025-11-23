@@ -267,6 +267,30 @@ ReactGen looks for files in `src/`, `components/`, and `app/` directories. Ensur
 ### Parse errors
 Some files may fail to parse due to syntax errors or unsupported features. These errors are logged but don't stop the scan.
 
+### Unicode/Emoji Display Issues
+
+ReactGen automatically detects terminal capabilities and uses ASCII fallbacks when Unicode isn't supported:
+
+- **Unicode Mode** (modern terminals): `📁 📄 🧪 ✓`
+- **ASCII Mode** (basic terminals): `[DIR] [FILE] [TEST] [OK]`
+
+The tool checks:
+- `TERM` environment variable
+- Locale settings (`LANG`, `LC_ALL`)
+- CI/CD environment
+- Platform (Windows/Unix)
+
+If you see mojibake/garbled characters, your terminal may need UTF-8 configuration:
+
+```bash
+# Check your locale
+echo $LANG
+
+# Set UTF-8 locale (add to ~/.bashrc or ~/.zshrc)
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+```
+
 ## License
 
 Apache License 2.0 - See LICENSE file for details.

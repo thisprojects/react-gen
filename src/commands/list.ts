@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { REPLState } from '../repl/state.js';
+import { icons } from '../utils/icons.js';
 
 export async function listCommand(state: REPLState, filter?: string) {
   const files = state.getFiles();
@@ -38,11 +39,11 @@ export async function listCommand(state: REPLState, filter?: string) {
   console.log();
 
   for (const [dir, files] of Object.entries(grouped)) {
-    console.log(chalk.blue(`📁 ${dir}/`));
+    console.log(chalk.blue(`${icons.folder} ${dir}/`));
     for (const file of files) {
       const icon = file.includes('.test.') || file.includes('.spec.')
-        ? '🧪'
-        : '📄';
+        ? icons.test
+        : icons.file;
       console.log(`  ${icon} ${file}`);
     }
     console.log();
