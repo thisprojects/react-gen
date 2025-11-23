@@ -23,6 +23,12 @@ export async function listCommand(state: REPLState, filter?: string) {
     return;
   }
 
+  // Count different file types
+  const testFiles = filteredFiles.filter(f =>
+    f.includes('.test.') || f.includes('.spec.')
+  ).length;
+  const componentFiles = filteredFiles.length - testFiles;
+
   // Group by directory
   const grouped: Record<string, string[]> = {};
 
@@ -34,8 +40,12 @@ export async function listCommand(state: REPLState, filter?: string) {
     grouped[dir].push(file.split('/').pop()!);
   }
 
-  // Display grouped results
-  console.log(chalk.bold(`Files (${filteredFiles.length}):`));
+  // Display grouped results with enhanced summary
+  const summary = testFiles > 0
+    ? `${filteredFiles.length} total, ${componentFiles} components, ${testFiles} tests`
+    : `${filteredFiles.length} total`;
+
+  console.log(chalk.bold(`Files (${summary}):`));
   console.log();
 
   for (const [dir, files] of Object.entries(grouped)) {

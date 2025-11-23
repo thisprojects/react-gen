@@ -36,6 +36,67 @@ describe('parseFile', () => {
       expect(result.type).toBe('component');
     });
 
+    it('should parse arrow function default export', () => {
+      const content = `
+        import React from 'react';
+
+        export default () => {
+          return <div>Hello World</div>;
+        };
+      `;
+
+      const result = parseFile(content, 'Arrow.tsx');
+
+      expect(result.exports).toContain('default');
+      expect(result.imports).toContain('react');
+      expect(result.type).toBe('component');
+    });
+
+    it('should parse arrow function default export with props', () => {
+      const content = `
+        import React from 'react';
+
+        export default ({ title, onClick }) => {
+          return <button onClick={onClick}>{title}</button>;
+        };
+      `;
+
+      const result = parseFile(content, 'ArrowButton.tsx');
+
+      expect(result.exports).toContain('default');
+      expect(result.type).toBe('component');
+    });
+
+    it('should parse arrow function default export with implicit return', () => {
+      const content = `
+        import React from 'react';
+
+        export default () => <div>Implicit Return</div>;
+      `;
+
+      const result = parseFile(content, 'ImplicitArrow.tsx');
+
+      expect(result.exports).toContain('default');
+      expect(result.type).toBe('component');
+    });
+
+    it('should parse arrow function default export with TypeScript types', () => {
+      const content = `
+        import React from 'react';
+
+        interface Props {
+          name: string;
+        }
+
+        export default ({ name }: Props) => <div>Hello {name}</div>;
+      `;
+
+      const result = parseFile(content, 'TypedArrow.tsx');
+
+      expect(result.exports).toContain('default');
+      expect(result.type).toBe('component');
+    });
+
     it('should parse multiple named exports', () => {
       const content = `
         export const Header = () => <header>Header</header>;

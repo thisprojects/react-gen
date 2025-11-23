@@ -46,7 +46,7 @@ describe('listCommand', () => {
 
     await listCommand(state);
 
-    expect(consoleOutput.some(line => line.includes('Files (3)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (3 total'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('App.tsx'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('Button.tsx'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('Header.tsx'))).toBe(true);
@@ -84,7 +84,7 @@ describe('listCommand', () => {
 
     await listCommand(state, 'Button');
 
-    expect(consoleOutput.some(line => line.includes('Files (1)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (1 total'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('Button.tsx'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('App.tsx'))).toBe(false);
     expect(consoleOutput.some(line => line.includes('Input.tsx'))).toBe(false);
@@ -104,7 +104,7 @@ describe('listCommand', () => {
 
     await listCommand(state, 'mycomponent');
 
-    expect(consoleOutput.some(line => line.includes('Files (1)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (1 total'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('MyComponent.tsx'))).toBe(true);
   });
 
@@ -140,7 +140,7 @@ describe('listCommand', () => {
 
     await listCommand(state, 'components');
 
-    expect(consoleOutput.some(line => line.includes('Files (1)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (1 total'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('Header.tsx'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('App.tsx'))).toBe(false);
   });
@@ -229,7 +229,7 @@ describe('listCommand', () => {
 
     await listCommand(state, '.jsx');
 
-    expect(consoleOutput.some(line => line.includes('Files (1)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (1 total'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('Legacy.jsx'))).toBe(true);
   });
 
@@ -252,7 +252,7 @@ describe('listCommand', () => {
 
     await listCommand(state);
 
-    expect(consoleOutput.some(line => line.includes('Files (4)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (4 total'))).toBe(true);
   });
 
   it('should handle partial filename matches', async () => {
@@ -273,9 +273,136 @@ describe('listCommand', () => {
 
     await listCommand(state, 'User');
 
-    expect(consoleOutput.some(line => line.includes('Files (2)'))).toBe(true);
+    expect(consoleOutput.some(line => line.includes('Files (2 total'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('UserProfile.tsx'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('UserSettings.tsx'))).toBe(true);
     expect(consoleOutput.some(line => line.includes('AdminPanel.tsx'))).toBe(false);
+  });
+
+  describe('file count summary', () => {
+    it('should show breakdown when test files are present', async () => {
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: '/test',
+        structure: {},
+        files: [
+          'src/Button.tsx',
+          'src/Button.test.tsx',
+          'src/Card.tsx',
+          'src/Card.test.tsx',
+          'src/Header.tsx'
+        ],
+        components: []
+      };
+
+      state.setProjectMap(projectMap);
+
+      await listCommand(state);
+
+      // Should show: 5 total, 3 components, 2 tests
+      expect(consoleOutput.some(line => line.includes('5 total'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('3 components'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('2 tests'))).toBe(true);
+    });
+
+    it('should show "total" only when no test files', async () => {
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: '/test',
+        structure: {},
+        files: [
+          'src/Button.tsx',
+          'src/Card.tsx',
+          'src/Header.tsx'
+        ],
+        components: []
+      };
+
+      state.setProjectMap(projectMap);
+
+      await listCommand(state);
+
+      // Should show: 3 total (no breakdown)
+      expect(consoleOutput.some(line => line.includes('3 total'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('components'))).toBe(false);
+      expect(consoleOutput.some(line => line.includes('tests'))).toBe(false);
+    });
+
+    it('should count .spec. files as tests', async () => {
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: '/test',
+        structure: {},
+        files: [
+          'src/utils.ts',
+          'src/utils.spec.ts',
+          'src/helpers.ts',
+          'src/helpers.spec.ts'
+        ],
+        components: []
+      };
+
+      state.setProjectMap(projectMap);
+
+      await listCommand(state);
+
+      // Should count both .spec. files as tests
+      expect(consoleOutput.some(line => line.includes('4 total'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('2 components'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('2 tests'))).toBe(true);
+    });
+
+    it('should apply count to filtered results', async () => {
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: '/test',
+        structure: {},
+        files: [
+          'src/Button.tsx',
+          'src/Button.test.tsx',
+          'src/Card.tsx',
+          'src/Card.test.tsx',
+          'src/Header.tsx'
+        ],
+        components: []
+      };
+
+      state.setProjectMap(projectMap);
+
+      await listCommand(state, 'Button');
+
+      // Should show filtered count: 2 total, 1 components, 1 tests
+      expect(consoleOutput.some(line => line.includes('2 total'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('1 components'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('1 tests'))).toBe(true);
+    });
+
+    it('should handle all test files', async () => {
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: '/test',
+        structure: {},
+        files: [
+          'src/Button.test.tsx',
+          'src/Card.test.tsx',
+          'src/utils.spec.ts'
+        ],
+        components: []
+      };
+
+      state.setProjectMap(projectMap);
+
+      await listCommand(state);
+
+      // Should show: 3 total, 0 components, 3 tests
+      expect(consoleOutput.some(line => line.includes('3 total'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('0 components'))).toBe(true);
+      expect(consoleOutput.some(line => line.includes('3 tests'))).toBe(true);
+    });
   });
 });

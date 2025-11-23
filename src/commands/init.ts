@@ -48,12 +48,15 @@ export async function initCommand(state: REPLState) {
       JSON.stringify(projectMap, null, 2)
     );
 
-    state.setProjectMap(projectMap);
+    await state.setProjectMap(projectMap);
 
     spinner.succeed('Project scan complete');
 
     // Display summary
     console.log();
+    if (state.projectName) {
+      console.log(`${icons.checkmark} Project: ${state.projectName}`);
+    }
     console.log(`${icons.checkmark} Found ${projectMap.files.length} React files`);
     console.log(`${icons.checkmark} Found ${projectMap.components.length} components`);
     console.log(`${icons.checkmark} Project map saved to .reactgen/project-map.json`);

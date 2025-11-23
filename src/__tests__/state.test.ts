@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { REPLState } from '../repl/state.js';
 import type { ProjectMap } from '../core/mapper.js';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
 describe('REPLState', () => {
   let state: REPLState;
@@ -154,6 +157,135 @@ describe('REPLState', () => {
       state.projectRoot = '/first/path';
       state.projectRoot = '/second/path';
       expect(state.projectRoot).toBe('/second/path');
+    });
+  });
+
+  describe('projectName extraction', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      // Create a temporary directory for testing
+      tempDir = path.join(os.tmpdir(), `reactgen-test-${Date.now()}`);
+      await fs.mkdir(tempDir, { recursive: true });
+    });
+
+    afterEach(async () => {
+      // Clean up temporary directory
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+
+    it('should extract project name from package.json', async () => {
+      const pkgJson = {
+        name: 'my-awesome-app',
+        version: '1.0.0'
+      };
+
+      await fs.writeFile(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify(pkgJson)
+      );
+
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: tempDir,
+        structure: {},
+        files: [],
+        components: []
+      };
+
+      await state.setProjectMap(projectMap);
+
+      expect(state.projectName).toBe('my-awesome-app');
+    });
+
+    it('should handle missing package.json gracefully', async () => {
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: tempDir,
+        structure: {},
+        files: [],
+        components: []
+      };
+
+      await state.setProjectMap(projectMap);
+
+      expect(state.projectName).toBeNull();
+    });
+
+    it('should handle package.json without name field', async () => {
+      const pkgJson = {
+        version: '1.0.0',
+        dependencies: {}
+      };
+
+      await fs.writeFile(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify(pkgJson)
+      );
+
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: tempDir,
+        structure: {},
+        files: [],
+        components: []
+      };
+
+      await state.setProjectMap(projectMap);
+
+      expect(state.projectName).toBeNull();
+    });
+
+    it('should handle malformed package.json', async () => {
+      await fs.writeFile(
+        path.join(tempDir, 'package.json'),
+        'invalid json {'
+      );
+
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: tempDir,
+        structure: {},
+        files: [],
+        components: []
+      };
+
+      await state.setProjectMap(projectMap);
+
+      expect(state.projectName).toBeNull();
+    });
+
+    it('should extract scoped package names', async () => {
+      const pkgJson = {
+        name: '@myorg/my-package',
+        version: '2.1.0'
+      };
+
+      await fs.writeFile(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify(pkgJson)
+      );
+
+      const projectMap: ProjectMap = {
+        version: '1.0',
+        scannedAt: new Date().toISOString(),
+        rootDir: tempDir,
+        structure: {},
+        files: [],
+        components: []
+      };
+
+      await state.setProjectMap(projectMap);
+
+      expect(state.projectName).toBe('@myorg/my-package');
     });
   });
 });

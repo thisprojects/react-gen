@@ -45,6 +45,9 @@ export function parseFile(content: string, filePath: string): ParsedFile {
           if (path.node.declaration.id) {
             result.exports.push(path.node.declaration.id.name);
           }
+        } else if (path.node.declaration.type === 'ArrowFunctionExpression') {
+          // Arrow function default export - use 'default' as name
+          result.exports.push('default');
         }
       },
 
