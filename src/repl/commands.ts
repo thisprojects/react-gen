@@ -21,7 +21,8 @@ export async function handleCommand(
 
   switch (command.toLowerCase()) {
     case 'init':
-      await initCommand(state);
+      const force = args.includes('--force') || args.includes('-f');
+      await initCommand(state, force);
       break;
 
     case 'list':

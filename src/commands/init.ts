@@ -4,15 +4,9 @@ import fs from 'fs/promises';
 import { REPLState } from '../repl/state.js';
 import { buildProjectMap } from '../core/mapper.js';
 import { icons } from '../utils/icons.js';
+import chalk from 'chalk';
 
-export async function initCommand(state: REPLState) {
-  const spinner = ora({
-    text: 'Scanning project structure...',
-    // Disable spinner in non-TTY environments and prevent stdin issues
-    isEnabled: process.stdout.isTTY,
-    discardStdin: false
-  }).start();
-
+export async function initCommand(state: REPLState, force: boolean = false) {
   try {
     // Find project root (look for package.json)
     const cwd = process.cwd();
@@ -22,9 +16,51 @@ export async function initCommand(state: REPLState) {
       await fs.access(packageJsonPath);
       state.projectRoot = cwd;
     } catch {
-      spinner.fail('No package.json found. Are you in a React project?');
+      console.log(chalk.red('No package.json found. Are you in a React project?'));
       return;
     }
+
+    // Check for existing project map (unless --force)
+    const reactgenDir = path.join(cwd, '.reactgen');
+    const mapPath = path.join(reactgenDir, 'project-map.json');
+
+    if (!force) {
+      try {
+        const existingMapContent = await fs.readFile(mapPath, 'utf-8');
+        const existingMap = JSON.parse(existingMapContent);
+        const scannedAt = new Date(existingMap.scannedAt);
+        const ageInMinutes = (Date.now() - scannedAt.getTime()) / 60000;
+
+        if (ageInMinutes < 5) {
+          // Use cached map
+          const ageText = ageInMinutes < 1
+            ? 'less than a minute ago'
+            : `${Math.floor(ageInMinutes)} minute${Math.floor(ageInMinutes) === 1 ? '' : 's'} ago`;
+
+          console.log(chalk.cyan(`${icons.info} Using cached project map (scanned ${ageText})`));
+          console.log(chalk.gray('Run /init --force to rescan\n'));
+
+          await state.setProjectMap(existingMap);
+
+          // Display summary
+          if (state.projectName) {
+            console.log(`${icons.checkmark} Project: ${state.projectName}`);
+          }
+          console.log(`${icons.checkmark} Found ${existingMap.files.length} React files`);
+          console.log(`${icons.checkmark} Found ${existingMap.components.length} components`);
+          return;
+        }
+      } catch {
+        // No existing map or error reading it - proceed with scan
+      }
+    }
+
+    const spinner = ora({
+      text: 'Scanning project structure...',
+      // Disable spinner in non-TTY environments and prevent stdin issues
+      isEnabled: process.stdout.isTTY,
+      discardStdin: false
+    }).start();
 
     spinner.text = 'Analyzing files...';
 
@@ -41,10 +77,9 @@ export async function initCommand(state: REPLState) {
     }
 
     // Save to .reactgen/project-map.json
-    const reactgenDir = path.join(cwd, '.reactgen');
     await fs.mkdir(reactgenDir, { recursive: true });
     await fs.writeFile(
-      path.join(reactgenDir, 'project-map.json'),
+      mapPath,
       JSON.stringify(projectMap, null, 2)
     );
 
@@ -62,7 +97,7 @@ export async function initCommand(state: REPLState) {
     console.log(`${icons.checkmark} Project map saved to .reactgen/project-map.json`);
 
   } catch (error: any) {
-    spinner.fail('Failed to scan project');
+    console.error(chalk.red('Failed to scan project'));
     console.error(error.message);
   }
 }

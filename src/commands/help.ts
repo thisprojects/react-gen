@@ -5,7 +5,10 @@ export function helpCommand() {
   const helpText = `
 ${chalk.bold('Available Commands:')}
 
-${chalk.blue('/init')}           Scan project and build component map
+${chalk.blue('/init [--force]')} Scan project and build component map
+                  Uses cached map if < 5 minutes old
+                  ${chalk.gray('--force')} or ${chalk.gray('-f')} to force rescan
+
 ${chalk.blue('/list [filter]')}  Show available files and components
                   Examples:
                     /list           (show all files)

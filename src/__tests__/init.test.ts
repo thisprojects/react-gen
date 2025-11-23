@@ -8,18 +8,38 @@ import os from 'os';
 // Mock console.log to capture output
 let consoleOutput: string[] = [];
 const originalLog = console.log;
-const originalCwd = process.cwd;
+const originalCwdValue = process.cwd();
 
 beforeEach(() => {
   consoleOutput = [];
   console.log = jest.fn((...args: any[]) => {
     consoleOutput.push(args.join(' '));
   }) as any;
+
+  // Ensure we're in a valid directory
+  try {
+    process.cwd();
+  } catch {
+    try {
+      process.chdir(originalCwdValue);
+    } catch {
+      process.chdir(os.homedir());
+    }
+  }
 });
 
 afterEach(() => {
   console.log = originalLog;
-  process.cwd = originalCwd;
+
+  // Always restore to original directory
+  try {
+    process.chdir(originalCwdValue);
+  } catch {
+    // If original doesn't exist, go home
+    try {
+      process.chdir(os.homedir());
+    } catch {}
+  }
 });
 
 describe('initCommand', () => {
@@ -253,8 +273,8 @@ describe('initCommand', () => {
       'export const Button = () => <button>Click</button>;'
     );
 
-    // Re-initialize
-    await initCommand(state);
+    // Re-initialize with force flag to bypass cache
+    await initCommand(state, true);
     expect(state.getFiles()).toHaveLength(2);
     expect(state.getComponents()).toHaveLength(2);
   });
@@ -284,5 +304,188 @@ describe('initCommand', () => {
       // Restore permissions for cleanup
       await fs.chmod(filePath, 0o644).catch(() => {});
     }
+  });
+
+  describe('project map caching', () => {
+    it('should use cached project map when recent', async () => {
+      const state = new REPLState();
+
+      // Create test project with package.json
+      const testDir = path.join(os.tmpdir(), `reactgen-cache-test-${Date.now()}`);
+      await fs.mkdir(testDir, { recursive: true });
+      await fs.mkdir(path.join(testDir, 'src'), { recursive: true });
+
+      // Create package.json
+      await fs.writeFile(
+        path.join(testDir, 'package.json'),
+        JSON.stringify({ name: 'test-project' })
+      );
+
+      // Create a React file
+      await fs.writeFile(
+        path.join(testDir, 'src', 'App.tsx'),
+        'export const App = () => <div>Test</div>;'
+      );
+
+      // Mock process.cwd to return our test directory
+      process.cwd = jest.fn(() => testDir) as any;
+
+      try {
+        // First init - should scan
+        await initCommand(state);
+
+        expect(state.isInitialized).toBe(true);
+
+        // Reset state
+        const state2 = new REPLState();
+
+        // Clear the global console output and use it
+        consoleOutput = [];
+
+        // Second init - should use cache
+        await initCommand(state2);
+
+        // Should have used cached map
+        expect(consoleOutput.some(log => log.includes('Using cached project map'))).toBe(true);
+        expect(consoleOutput.some(log => log.includes('--force'))).toBe(true);
+        expect(state2.isInitialized).toBe(true);
+      } finally {
+        await fs.rm(testDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should force rescan with --force flag', async () => {
+      const state = new REPLState();
+
+      // Create test project
+      const testDir = path.join(os.tmpdir(), `reactgen-force-test-${Date.now()}`);
+      await fs.mkdir(testDir, { recursive: true });
+      await fs.mkdir(path.join(testDir, 'src'), { recursive: true });
+
+      await fs.writeFile(
+        path.join(testDir, 'package.json'),
+        JSON.stringify({ name: 'test-project' })
+      );
+
+      await fs.writeFile(
+        path.join(testDir, 'src', 'App.tsx'),
+        'export const App = () => <div>Test</div>;'
+      );
+
+      // Mock process.cwd to return our test directory
+      process.cwd = jest.fn(() => testDir) as any;
+
+      try {
+        // First init
+        await initCommand(state);
+
+        // Reset state
+        const state2 = new REPLState();
+
+        // Clear global console output
+        consoleOutput = [];
+
+        // Init with force - should NOT use cache
+        await initCommand(state2, true);
+
+        // Should NOT have used cached map
+        expect(consoleOutput.some(log => log.includes('Using cached project map'))).toBe(false);
+        expect(state2.isInitialized).toBe(true);
+      } finally {
+        await fs.rm(testDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should rescan when cached map is older than 5 minutes', async () => {
+      const state = new REPLState();
+
+      // Create test project
+      const testDir = path.join(os.tmpdir(), `reactgen-old-test-${Date.now()}`);
+      await fs.mkdir(testDir, { recursive: true });
+      await fs.mkdir(path.join(testDir, 'src'), { recursive: true });
+      await fs.mkdir(path.join(testDir, '.reactgen'), { recursive: true });
+
+      await fs.writeFile(
+        path.join(testDir, 'package.json'),
+        JSON.stringify({ name: 'test-project' })
+      );
+
+      await fs.writeFile(
+        path.join(testDir, 'src', 'App.tsx'),
+        'export const App = () => <div>Test</div>;'
+      );
+
+      // Create an old project map (6 minutes ago)
+      const oldDate = new Date(Date.now() - 6 * 60 * 1000);
+      const oldMap = {
+        version: '1.0',
+        scannedAt: oldDate.toISOString(),
+        rootDir: testDir,
+        structure: {},
+        files: ['src/App.tsx'],
+        components: []
+      };
+
+      await fs.writeFile(
+        path.join(testDir, '.reactgen', 'project-map.json'),
+        JSON.stringify(oldMap)
+      );
+
+      // Mock process.cwd to return our test directory
+      process.cwd = jest.fn(() => testDir) as any;
+
+      try {
+        // Clear global console output
+        consoleOutput = [];
+
+        // Init should NOT use old cache
+        await initCommand(state);
+
+        // Should have rescanned (not used cache)
+        expect(consoleOutput.some(log => log.includes('Using cached project map'))).toBe(false);
+        expect(state.isInitialized).toBe(true);
+      } finally {
+        await fs.rm(testDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should handle corrupted cached map gracefully', async () => {
+      const state = new REPLState();
+
+      // Create test project
+      const testDir = path.join(os.tmpdir(), `reactgen-corrupt-test-${Date.now()}`);
+      await fs.mkdir(testDir, { recursive: true });
+      await fs.mkdir(path.join(testDir, 'src'), { recursive: true });
+      await fs.mkdir(path.join(testDir, '.reactgen'), { recursive: true });
+
+      await fs.writeFile(
+        path.join(testDir, 'package.json'),
+        JSON.stringify({ name: 'test-project' })
+      );
+
+      await fs.writeFile(
+        path.join(testDir, 'src', 'App.tsx'),
+        'export const App = () => <div>Test</div>;'
+      );
+
+      // Create corrupted project map
+      await fs.writeFile(
+        path.join(testDir, '.reactgen', 'project-map.json'),
+        'invalid json {'
+      );
+
+      // Mock process.cwd to return our test directory
+      process.cwd = jest.fn(() => testDir) as any;
+
+      try {
+        // Should rescan when cache is corrupted
+        await initCommand(state);
+
+        expect(state.isInitialized).toBe(true);
+        expect(state.projectMap).not.toBeNull();
+      } finally {
+        await fs.rm(testDir, { recursive: true, force: true });
+      }
+    });
   });
 });
