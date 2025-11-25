@@ -10,6 +10,8 @@ export default {
     '^chalk$': '<rootDir>/src/__tests__/__mocks__/chalk.ts',
     '^ora$': '<rootDir>/src/__tests__/__mocks__/ora.ts',
     '^boxen$': '<rootDir>/src/__tests__/__mocks__/boxen.ts',
+    '^inquirer$': '<rootDir>/src/__tests__/__mocks__/inquirer.ts',
+    '^ollama$': '<rootDir>/src/__tests__/__mocks__/ollama.ts',
   },
   transformIgnorePatterns: [
     'node_modules/(?!(chalk|boxen|ora|cli-spinners|strip-ansi|ansi-regex|ansi-styles|is-interactive|is-unicode-supported|log-symbols|wrap-ansi|string-width|emoji-regex|strip-ansi)/)',

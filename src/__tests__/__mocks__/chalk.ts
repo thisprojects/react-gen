@@ -1,13 +1,20 @@
 // Mock chalk for Jest tests
-const chalk = {
-  green: (str: string) => str,
-  blue: (str: string) => str,
-  yellow: (str: string) => str,
-  red: (str: string) => str,
-  gray: (str: string) => str,
-  cyan: (str: string) => str,
-  bold: (str: string) => str,
-  dim: (str: string) => str,
+const createChainableChalk = () => {
+  const colorFn = (str: string) => str;
+
+  // Add all color methods to the function
+  colorFn.green = colorFn;
+  colorFn.blue = colorFn;
+  colorFn.yellow = colorFn;
+  colorFn.red = colorFn;
+  colorFn.gray = colorFn;
+  colorFn.cyan = colorFn;
+  colorFn.bold = colorFn;
+  colorFn.dim = colorFn;
+
+  return colorFn;
 };
+
+const chalk = createChainableChalk();
 
 export default chalk;
