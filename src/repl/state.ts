@@ -1,3 +1,5 @@
+import { OllamaClient } from '../core/llm/ollama-client.js';
+
 export interface ProjectMap {
   version: string;
   scannedAt: string;
@@ -12,6 +14,13 @@ export class REPLState {
   public projectRoot: string | null = null;
   public projectName: string | null = null;
   public isInitialized: boolean = false;
+  public ollamaClient: OllamaClient;
+
+  constructor() {
+    this.ollamaClient = new OllamaClient({
+      model: process.env.OLLAMA_MODEL || 'qwen2.5-coder:14b'
+    });
+  }
 
   async setProjectMap(map: ProjectMap) {
     this.projectMap = map;

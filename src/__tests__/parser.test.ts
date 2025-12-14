@@ -217,12 +217,22 @@ describe('parseFile', () => {
         };
       `;
 
+      // Mock console.error to suppress expected error output
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
       // Should not throw, but return empty result
       const result = parseFile(content, 'Broken.tsx');
 
       expect(result.exports).toHaveLength(0);
       expect(result.imports).toHaveLength(0);
       expect(result.type).toBe('utility');
+
+      // Verify error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to parse Broken.tsx')
+      );
+
+      consoleErrorSpy.mockRestore();
     });
 
     it('should handle empty files', () => {
