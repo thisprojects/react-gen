@@ -10,6 +10,16 @@ describe('OllamaClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     client = new OllamaClient({ model: 'qwen2.5-coder:14b' });
+
+    // Mock the ollama instance to prevent "list is not a function" errors
+    (client as any).ollama = {
+      list: jest.fn<any>().mockResolvedValue({
+        models: [{ name: 'qwen2.5-coder:14b' }]
+      }),
+      generate: jest.fn<any>().mockResolvedValue({
+        response: 'export default function Component() { return <div>Test</div>; }'
+      })
+    };
   });
 
   describe('constructor', () => {
@@ -46,24 +56,28 @@ describe('OllamaClient', () => {
     });
 
     it('should throw error if model not found', async () => {
-      // Mock Ollama to return empty models list
-      const mockOllama = require('ollama');
-      mockOllama.Ollama.prototype.list = jest.fn<any>().mockResolvedValue({
-        models: []
-      });
-
       const newClient = new OllamaClient({ model: 'missing-model' });
+
+      // Mock the ollama instance to return empty models list
+      (newClient as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({
+          models: []
+        })
+      };
 
       await expect(newClient.initialize()).rejects.toThrow('Model missing-model not found');
     });
 
     it('should handle connection refused error', async () => {
-      const mockOllama = require('ollama');
+      const newClient = new OllamaClient();
+
       const error = new Error('Connection refused') as any;
       error.code = 'ECONNREFUSED';
-      mockOllama.Ollama.prototype.list = jest.fn<any>().mockRejectedValue(error);
 
-      const newClient = new OllamaClient();
+      // Mock the ollama instance to return connection error
+      (newClient as any).ollama = {
+        list: jest.fn<any>().mockRejectedValue(error)
+      };
 
       await expect(newClient.initialize()).rejects.toThrow('Cannot connect to Ollama');
     });
@@ -116,12 +130,15 @@ describe('OllamaClient', () => {
     });
 
     it('should handle connection failure', async () => {
-      const mockOllama = require('ollama');
-      mockOllama.Ollama.prototype.list = jest.fn<any>().mockRejectedValue(
-        new Error('Connection failed')
-      );
-
       const newClient = new OllamaClient();
+
+      // Mock the ollama instance to return connection error
+      (newClient as any).ollama = {
+        list: jest.fn<any>().mockRejectedValue(
+          new Error('Connection failed')
+        )
+      };
+
       const status = await newClient.checkStatus();
 
       expect(status.connected).toBe(false);
@@ -171,8 +188,8 @@ describe('OllamaClient', () => {
 
   describe('error handling', () => {
     it('should propagate Ollama errors', async () => {
-      const mockOllama = require('ollama');
-      mockOllama.Ollama.prototype.generate = jest.fn<any>().mockRejectedValue(
+      // Override the mock to return an error
+      (client as any).ollama.generate = jest.fn<any>().mockRejectedValue(
         new Error('Ollama error')
       );
 
@@ -185,12 +202,28 @@ describe('OllamaClient', () => {
   describe('model name variations', () => {
     it('should handle model name with tag', async () => {
       const client = new OllamaClient({ model: 'qwen2.5-coder:14b' });
+
+      // Mock the ollama instance
+      (client as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({
+          models: [{ name: 'qwen2.5-coder:14b' }]
+        })
+      };
+
       await expect(client.initialize()).resolves.not.toThrow();
     });
 
     it('should handle model name prefix matching', async () => {
       // Mock should match even if full name has more details
       const client = new OllamaClient({ model: 'qwen2.5-coder' });
+
+      // Mock the ollama instance
+      (client as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({
+          models: [{ name: 'qwen2.5-coder:14b' }]
+        })
+      };
+
       await expect(client.initialize()).resolves.not.toThrow();
     });
   });

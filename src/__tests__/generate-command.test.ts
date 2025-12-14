@@ -6,31 +6,65 @@ import fs from 'fs/promises';
 jest.mock('ollama');
 jest.mock('inquirer');
 jest.mock('fs/promises');
+jest.mock('ora', () => {
+  return jest.fn(() => ({
+    start: jest.fn().mockReturnThis(),
+    succeed: jest.fn().mockReturnThis(),
+    fail: jest.fn().mockReturnThis(),
+    stop: jest.fn().mockReturnThis()
+  }));
+});
+
+// Mock inquirer module at the top level
+jest.mock('inquirer', () => ({
+  prompt: jest.fn()
+}));
 
 describe('generateCommand', () => {
   let state: REPLState;
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
   let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+  let mockInquirerPrompt: jest.Mock;
 
   beforeEach(() => {
     state = new REPLState();
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     // Mock fs.access to simulate files don't exist
-    (fs.access as jest.Mock).mockRejectedValue(new Error('File not found'));
+    (fs.access as jest.Mock).mockRejectedValue(new Error('File not found') as never);
 
     // Mock fs.mkdir to succeed
-    (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
+    (fs.mkdir as jest.Mock).mockResolvedValue(undefined as never);
 
     // Mock fs.writeFile to succeed
-    (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+    (fs.writeFile as jest.Mock).mockResolvedValue(undefined as never);
+
+    // Get reference to inquirer.prompt mock
+    const inquirer = require('inquirer');
+    mockInquirerPrompt = inquirer.prompt as jest.Mock<any>;
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
+
+    // Mock the ollama client's ollama instance
+    (state.ollamaClient as any).ollama = {
+      list: jest.fn<any>().mockResolvedValue({
+        models: [{ name: 'qwen2.5-coder:14b' }]
+      }),
+      generate: jest.fn<any>().mockResolvedValue({
+        response: 'export default function Component() { return <div>Test</div>; }'
+      })
+    };
   });
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
-    jest.clearAllMocks();
+    // Clear fs and inquirer mock call history for next test
+    (fs.access as jest.Mock).mockClear();
+    (fs.mkdir as jest.Mock).mockClear();
+    (fs.writeFile as jest.Mock).mockClear();
+    mockInquirerPrompt.mockClear();
   });
 
   describe('initialization check', () => {
@@ -111,19 +145,18 @@ describe('generateCommand', () => {
     });
 
     it('should generate component code', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, 'create a @button');
 
+      // Should analyze the request and find the component
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Generating')
+        expect.stringContaining('Found 1 component')
       );
     });
 
     it('should use project root for file paths', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 
@@ -136,8 +169,7 @@ describe('generateCommand', () => {
 
     it('should use current directory if no project root', async () => {
       state.projectRoot = null;
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@button');
 
@@ -155,8 +187,7 @@ describe('generateCommand', () => {
     });
 
     it('should handle multiple components with counts', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, 'create three @card components');
 
@@ -173,20 +204,18 @@ describe('generateCommand', () => {
     });
 
     it('should show confirmation prompt', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Will create')
       );
-      expect(inquirer.prompt).toHaveBeenCalled();
+      expect(mockInquirerPrompt).toHaveBeenCalled();
     });
 
     it('should cancel on user rejection', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: false });
+      mockInquirerPrompt.mockResolvedValue({ confirm: false } as never);
 
       await generateCommand(state, '@login');
 
@@ -197,8 +226,7 @@ describe('generateCommand', () => {
     });
 
     it('should create directories if needed', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@button');
 
@@ -209,8 +237,7 @@ describe('generateCommand', () => {
     });
 
     it('should write files on confirmation', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 
@@ -218,8 +245,7 @@ describe('generateCommand', () => {
     });
 
     it('should show success message after creation', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 
@@ -229,8 +255,7 @@ describe('generateCommand', () => {
     });
 
     it('should show line count in success message', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 
@@ -247,8 +272,7 @@ describe('generateCommand', () => {
     });
 
     it('should generate proper component name from template', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@form:login');
 
@@ -260,8 +284,7 @@ describe('generateCommand', () => {
     });
 
     it('should number multiple components', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, 'create three @card components');
 
@@ -273,8 +296,7 @@ describe('generateCommand', () => {
     });
 
     it('should capitalize component names', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@button');
 
@@ -294,16 +316,16 @@ describe('generateCommand', () => {
 
     it('should handle generation errors', async () => {
       const mockOllama = state.ollamaClient as any;
-      mockOllama.generate = jest.fn().mockRejectedValue(new Error('Generation failed'));
+      mockOllama.ollama.generate = jest.fn<any>().mockRejectedValue(new Error('Generation failed'));
 
-      await generateCommand(state, '@login');
+      // Use a request with customization to trigger LLM usage
+      await generateCommand(state, 'create a @login with custom styling');
 
       expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('should continue with other components on partial failure', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       // First component succeeds, would continue with others
       await generateCommand(state, '@login and @button');
@@ -316,7 +338,7 @@ describe('generateCommand', () => {
 
     it('should show message when no files to create', async () => {
       // All files exist
-      (fs.access as jest.Mock).mockResolvedValue(undefined);
+      (fs.access as jest.Mock).mockResolvedValue(undefined as never);
 
       await generateCommand(state, '@login');
 
@@ -333,8 +355,7 @@ describe('generateCommand', () => {
     });
 
     it('should extract customization text from description', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, 'make a @login form with validation and error messages');
 
@@ -343,8 +364,7 @@ describe('generateCommand', () => {
     });
 
     it('should handle @references in customization text', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, 'create a landing page with @button components');
 
@@ -359,8 +379,7 @@ describe('generateCommand', () => {
     });
 
     it('should show spinner during generation', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 
@@ -369,8 +388,7 @@ describe('generateCommand', () => {
     });
 
     it('should use relative paths in output', async () => {
-      const inquirer = require('inquirer');
-      inquirer.prompt.mockResolvedValue({ confirm: true });
+      mockInquirerPrompt.mockResolvedValue({ confirm: true } as never);
 
       await generateCommand(state, '@login');
 

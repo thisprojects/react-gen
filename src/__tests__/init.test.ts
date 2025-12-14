@@ -5,15 +5,21 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-// Mock console.log to capture output
+// Mock console.log and console.error to capture output
 let consoleOutput: string[] = [];
+let consoleErrors: string[] = [];
 const originalLog = console.log;
+const originalError = console.error;
 const originalCwdValue = process.cwd();
 
 beforeEach(() => {
   consoleOutput = [];
+  consoleErrors = [];
   console.log = jest.fn((...args: any[]) => {
     consoleOutput.push(args.join(' '));
+  }) as any;
+  console.error = jest.fn((...args: any[]) => {
+    consoleErrors.push(args.join(' '));
   }) as any;
 
   // Ensure we're in a valid directory
@@ -30,6 +36,7 @@ beforeEach(() => {
 
 afterEach(() => {
   console.log = originalLog;
+  console.error = originalError;
 
   // Always restore to original directory
   try {

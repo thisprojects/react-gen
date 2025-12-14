@@ -10,7 +10,7 @@ describe('llmCommand', () => {
 
   beforeEach(() => {
     mockOllamaClient = new OllamaClient({ model: 'test-model' });
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -19,12 +19,12 @@ describe('llmCommand', () => {
 
   describe('status command (no subcommand)', () => {
     it('should show connection error when Ollama not running', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: false,
         model: 'test-model',
         available: false,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient);
 
@@ -34,12 +34,12 @@ describe('llmCommand', () => {
     });
 
     it('should show model not available when model missing', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: false,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient);
 
@@ -49,13 +49,13 @@ describe('llmCommand', () => {
     });
 
     it('should show ready status when initialized', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: true,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true);
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true) as any;
 
       await llmCommand(mockOllamaClient);
 
@@ -65,13 +65,13 @@ describe('llmCommand', () => {
     });
 
     it('should show initialization prompt when connected but not initialized', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: true,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false);
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false) as any;
 
       await llmCommand(mockOllamaClient);
 
@@ -86,13 +86,13 @@ describe('llmCommand', () => {
 
   describe('status subcommand', () => {
     it('should show same output as no subcommand', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: true,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true);
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true) as any;
 
       await llmCommand(mockOllamaClient, 'status');
 
@@ -104,9 +104,9 @@ describe('llmCommand', () => {
 
   describe('init subcommand', () => {
     it('should initialize Ollama successfully', async () => {
-      const mockInitialize = jest.fn().mockResolvedValue(undefined);
-      mockOllamaClient.initialize = mockInitialize;
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false);
+      const mockInitialize = jest.fn<any>().mockResolvedValue(undefined);
+      mockOllamaClient.initialize = mockInitialize as any;
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false) as any;
 
       await llmCommand(mockOllamaClient, 'init');
 
@@ -117,7 +117,7 @@ describe('llmCommand', () => {
     });
 
     it('should show already initialized message', async () => {
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true);
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true) as any;
 
       await llmCommand(mockOllamaClient, 'init');
 
@@ -127,11 +127,11 @@ describe('llmCommand', () => {
     });
 
     it('should handle initialization errors', async () => {
-      const mockInitialize = jest.fn().mockRejectedValue(new Error('Init failed'));
-      mockOllamaClient.initialize = mockInitialize;
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false);
+      const mockInitialize = jest.fn<any>().mockRejectedValue(new Error('Init failed'));
+      mockOllamaClient.initialize = mockInitialize as any;
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false) as any;
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await llmCommand(mockOllamaClient, 'init');
 
@@ -144,9 +144,9 @@ describe('llmCommand', () => {
     });
 
     it('should show usage example after successful initialization', async () => {
-      const mockInitialize = jest.fn().mockResolvedValue(undefined);
-      mockOllamaClient.initialize = mockInitialize;
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false);
+      const mockInitialize = jest.fn<any>().mockResolvedValue(undefined);
+      mockOllamaClient.initialize = mockInitialize as any;
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(false) as any;
 
       await llmCommand(mockOllamaClient, 'init');
 
@@ -158,12 +158,12 @@ describe('llmCommand', () => {
 
   describe('models subcommand', () => {
     it('should show current model when connected', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: true,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient, 'models');
 
@@ -176,12 +176,12 @@ describe('llmCommand', () => {
     });
 
     it('should show error when not connected', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: false,
         model: 'test-model',
         available: false,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient, 'models');
 
@@ -191,12 +191,12 @@ describe('llmCommand', () => {
     });
 
     it('should suggest ollama list command', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: true,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient, 'models');
 
@@ -206,10 +206,10 @@ describe('llmCommand', () => {
     });
 
     it('should handle checkStatus errors', async () => {
-      const mockCheckStatus = jest.fn().mockRejectedValue(new Error('Status error'));
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      const mockCheckStatus = jest.fn<any>().mockRejectedValue(new Error('Status error'));
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await llmCommand(mockOllamaClient, 'models');
 
@@ -248,7 +248,7 @@ describe('llmCommand', () => {
 
   describe('case sensitivity', () => {
     it('should handle uppercase subcommands', async () => {
-      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true);
+      mockOllamaClient.isInitialized = jest.fn().mockReturnValue(true) as any;
 
       await llmCommand(mockOllamaClient, 'INIT');
 
@@ -258,12 +258,12 @@ describe('llmCommand', () => {
     });
 
     it('should handle mixed case subcommands', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: true,
         model: 'test-model',
         available: true,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient, 'Status');
 
@@ -273,12 +273,12 @@ describe('llmCommand', () => {
 
   describe('output formatting', () => {
     it('should use colored output for status messages', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: false,
         model: 'test-model',
         available: false,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient);
 
@@ -287,12 +287,12 @@ describe('llmCommand', () => {
     });
 
     it('should show helpful instructions', async () => {
-      const mockCheckStatus = jest.fn().mockResolvedValue({
+      const mockCheckStatus = jest.fn<any>().mockResolvedValue({
         connected: false,
         model: 'test-model',
         available: false,
       });
-      mockOllamaClient.checkStatus = mockCheckStatus;
+      mockOllamaClient.checkStatus = mockCheckStatus as any;
 
       await llmCommand(mockOllamaClient);
 

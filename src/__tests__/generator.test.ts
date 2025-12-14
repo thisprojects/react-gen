@@ -11,6 +11,17 @@ describe('ComponentGenerator', () => {
 
   beforeEach(() => {
     mockOllamaClient = new OllamaClient({ model: 'test-model' });
+
+    // Mock the ollama instance to prevent "list is not a function" errors
+    (mockOllamaClient as any).ollama = {
+      list: jest.fn<any>().mockResolvedValue({
+        models: [{ name: 'test-model' }]
+      }),
+      generate: jest.fn<any>().mockResolvedValue({
+        response: 'export default function Component() { return <div>Test</div>; }'
+      })
+    };
+
     generator = new ComponentGenerator(mockOllamaClient);
   });
 
@@ -121,7 +132,10 @@ describe('ComponentGenerator', () => {
         response: '```tsx\nexport default function Test() {}\n```'
       });
 
-      (mockOllamaClient as any).ollama = { generate: mockGenerate };
+      (mockOllamaClient as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({ models: [{ name: 'test-model' }] }),
+        generate: mockGenerate
+      };
       await mockOllamaClient.initialize();
 
       const result = await generator.generate({
@@ -139,7 +153,10 @@ describe('ComponentGenerator', () => {
         response: 'export default function Test() {}'
       });
 
-      (mockOllamaClient as any).ollama = { generate: mockGenerate };
+      (mockOllamaClient as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({ models: [{ name: 'test-model' }] }),
+        generate: mockGenerate
+      };
       await mockOllamaClient.initialize();
 
       const result = await generator.generate({
@@ -156,7 +173,10 @@ describe('ComponentGenerator', () => {
         response: 'Here is your component:\n\nimport React from \'react\';\n\nexport default function Test() {}'
       });
 
-      (mockOllamaClient as any).ollama = { generate: mockGenerate };
+      (mockOllamaClient as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({ models: [{ name: 'test-model' }] }),
+        generate: mockGenerate
+      };
       await mockOllamaClient.initialize();
 
       const result = await generator.generate({
@@ -174,7 +194,10 @@ describe('ComponentGenerator', () => {
         response: '\'use client\';\n\nexport default function Test() {}'
       });
 
-      (mockOllamaClient as any).ollama = { generate: mockGenerate };
+      (mockOllamaClient as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({ models: [{ name: 'test-model' }] }),
+        generate: mockGenerate
+      };
       await mockOllamaClient.initialize();
 
       const result = await generator.generate({
@@ -276,7 +299,10 @@ describe('ComponentGenerator', () => {
   describe('error scenarios', () => {
     it('should handle LLM generation errors gracefully', async () => {
       const mockGenerate = jest.fn<any>().mockRejectedValue(new Error('LLM error'));
-      (mockOllamaClient as any).ollama = { generate: mockGenerate };
+      (mockOllamaClient as any).ollama = {
+        list: jest.fn<any>().mockResolvedValue({ models: [{ name: 'test-model' }] }),
+        generate: mockGenerate
+      };
       await mockOllamaClient.initialize();
 
       await expect(
